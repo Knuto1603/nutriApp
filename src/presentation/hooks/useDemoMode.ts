@@ -47,6 +47,8 @@ export function useDemoMode(): {
   resetAll: () => Promise<void>
 } {
   const loadDemo = useCallback(async (): Promise<void> => {
+    let pendingError: unknown = null
+
     const demoUser: User = {
       name: 'Lucía',
       age: 21,
@@ -57,102 +59,128 @@ export function useDemoMode(): {
       goal: 'maintain',
     }
 
-    await userRepo.save(demoUser)
-    useProfileStore.getState().setUser(demoUser)
+    try {
+      await userRepo.save(demoUser)
+      useProfileStore.getState().setUser(demoUser)
+    } catch (error) {
+      if (!pendingError) pendingError = error
+    }
 
     const { waterGoalMl } = calculateNutrition(demoUser)
 
-    for (let i = 0; i < 5; i++) {
-      const dateObj = new Date()
-      dateObj.setDate(dateObj.getDate() - i)
-      const date = localDateString(dateObj)
+    try {
+      let todayWaterLog: WaterLog | null = null
 
-      const meetsGoal = i !== 2
-      const totalMl = meetsGoal ? waterGoalMl : Math.round(waterGoalMl * 0.6)
+      for (let i = 0; i < 5; i++) {
+        const dateObj = new Date()
+        dateObj.setDate(dateObj.getDate() - i)
+        const date = localDateString(dateObj)
 
-      const morning = new Date(dateObj)
-      morning.setHours(9, 0, 0, 0)
-      const afternoon = new Date(dateObj)
-      afternoon.setHours(15, 0, 0, 0)
+        const meetsGoal = i !== 2
+        const totalMl = meetsGoal ? waterGoalMl : Math.round(waterGoalMl * 0.6)
 
-      const morningMl = Math.round(totalMl / 2)
-      const afternoonMl = totalMl - morningMl
+        const morning = new Date(dateObj)
+        morning.setHours(9, 0, 0, 0)
+        const afternoon = new Date(dateObj)
+        afternoon.setHours(15, 0, 0, 0)
 
-      const entries: WaterEntry[] = [
-        { time: morning.toISOString(), ml: morningMl },
-        { time: afternoon.toISOString(), ml: afternoonMl },
-      ]
+        const morningMl = Math.round(totalMl / 2)
+        const afternoonMl = totalMl - morningMl
 
-      const log: WaterLog = {
-        date,
-        entries,
-        totalMl,
-        goalMl: waterGoalMl,
+        const entries: WaterEntry[] = [
+          { time: morning.toISOString(), ml: morningMl },
+          { time: afternoon.toISOString(), ml: afternoonMl },
+        ]
+
+        const log: WaterLog = {
+          date,
+          entries,
+          totalMl,
+          goalMl: waterGoalMl,
+        }
+
+        await waterRepo.saveLog(log)
+        if (i === 0) {
+          todayWaterLog = log
+        }
       }
 
-      await waterRepo.saveLog(log)
-      if (i === 0) {
-        useWaterStore.getState().setLog(log)
+      if (todayWaterLog) {
+        useWaterStore.getState().setLog({
+          ...todayWaterLog,
+          goalMl: waterGoalMl,
+        })
       }
+    } catch (error) {
+      if (!pendingError) pendingError = error
     }
 
-    const allFoods = await foodRepo.getAll()
-    const today = localDateString()
+    try {
+      await diaryRepo.clearAll()
 
-    for (const target of DEMO_FOOD_TARGETS) {
-      const normalizedQuery = normalizeText(target.query)
-      const food = allFoods.find((f) => normalizeText(f.name).includes(normalizedQuery))
-      if (!food) continue
+      const allFoods = await foodRepo.getAll()
+      const today = localDateString()
 
-      const entry = buildDiaryEntry(food, target.grams, target.mealTime, today)
-      await diaryRepo.add(entry)
+      for (const target of DEMO_FOOD_TARGETS) {
+        const normalizedQuery = normalizeText(target.query)
+        const food = allFoods.find((f) => normalizeText(f.name).includes(normalizedQuery))
+        if (!food) continue
+
+        const entry = buildDiaryEntry(food, target.grams, target.mealTime, today)
+        await diaryRepo.add(entry)
+      }
+
+      const todayEntries = await diaryRepo.getByDate(today)
+      useDiaryStore.getState().setDay(today, todayEntries)
+    } catch (error) {
+      if (!pendingError) pendingError = error
     }
 
-    const todayEntries = await diaryRepo.getByDate(today)
-    useDiaryStore.getState().setDay(today, todayEntries)
+    try {
+      useChallengeStore.setState({ challenges: [], loaded: false })
+      await useChallengeStore.getState().load()
+    } catch (error) {
+      if (!pendingError) pendingError = error
+    }
+
+    if (pendingError) {
+      throw pendingError
+    }
   }, [])
 
   const resetAll = useCallback(async (): Promise<void> => {
+    try {
+      await diaryRepo.clearAll()
+    } catch {}
+
     try {
       const keys = await AsyncStorage.getAllKeys()
       const appKeys = keys.filter((key) => key.startsWith('@nutriapp:'))
       if (appKeys.length > 0) {
         await AsyncStorage.multiRemove(appKeys)
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     try {
       await notificationService.cancelAll()
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     try {
       useProfileStore.getState().setUser(null)
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     try {
       useDiaryStore.getState().setDay(localDateString(), [])
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     try {
       useWaterStore.setState({ log: null })
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     try {
       useChallengeStore.setState({ challenges: [], loaded: false })
       await useChallengeStore.getState().load()
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [])
 
   return { loadDemo, resetAll }
