@@ -34,16 +34,17 @@
       "expo-font",
       "expo-notifications"
     ],
-    "extra": {
-      "eas": {
-        "projectId": "546f7403-cfe8-4808-8db5-89c11c7179e4"
-      }
-    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#003176"
     },
-    "description": "App educativa de hábitos saludables y alimentación balanceada para estudiantes."
+    "description": "App educativa de hábitos saludables y alimentación balanceada para estudiantes.",
+    "extra": {
+      "eas": {
+        "projectId": "d1ce13be-2491-40c1-ad37-0fea45c20152"
+      }
+    },
+    "owner": "knuto1603"
   }
 }
