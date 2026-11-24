@@ -70,6 +70,11 @@ El archivo `.apk` se genera en la nube de Expo (no necesitas Android Studio). Se
 3. `cd distribucion && ./generar-qr.sh <URL_DE_LA_PAGINA> <URL_DEL_APK> <VERSION>` genera `qr.svg` e `index.generado.html` (requiere `qrencode`).
 4. Publicar la carpeta `distribucion/` y compartir el QR.
 
+**Publicado (v1.0.0):**
+- Página con QR: https://knuto1603.github.io/nutriApp/ (GitHub Pages, se despliega sola al cambiar `distribucion/publico/`).
+- APK: https://github.com/Knuto1603/nutriApp/releases/tag/v1.0.0
+- Para una versión nueva: `eas build`, subir el APK a un release nuevo, regenerar con `bash distribucion/generar-qr.sh <PAGINA> <URL_APK> <VERSION>`, copiar `index.generado.html` y `qr.svg` a `distribucion/publico/` (como `index.html`) y hacer push.
+
 > Solo Android. En iPhone un APK no instala; harían falta TestFlight (99 USD/año) o una versión web.
 
 ---
