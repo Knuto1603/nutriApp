@@ -1,0 +1,7 @@
+import { User } from '../entities/User'
+
+export interface IUserRepository {
+  save(user: User): Promise<void>
+  get(): Promise<User | null>
+  clear(): Promise<void>
+}

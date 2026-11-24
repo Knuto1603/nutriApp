@@ -1,0 +1,7 @@
+node_modules
+
+.expo/
+
+# artefactos generados por distribucion/generar-qr.sh
+distribucion/qr.svg
+distribucion/index.generado.html
